@@ -25,7 +25,7 @@ SOFTWARE.
 
 */
 
-void register_thread_pool_types();
-void unregister_thread_pool_types();
+void register_gd_thread_pool_types();
+void unregister_gd_thread_pool_types();
 
 #endif

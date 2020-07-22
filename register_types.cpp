@@ -32,7 +32,7 @@ SOFTWARE.
 
 static ThreadPool *thread_pool = NULL;
 
-void register_thread_pool_types() {
+void register_gd_thread_pool_types() {
 
 	ClassDB::register_class<ThreadPoolJob>();
 	ClassDB::register_class<ThreadPoolExecuteJob>();
@@ -42,7 +42,7 @@ void register_thread_pool_types() {
 	Engine::get_singleton()->add_singleton(Engine::Singleton("ThreadPool", ThreadPool::get_singleton()));
 }
 
-void unregister_thread_pool_types() {
+void unregister_gd_thread_pool_types() {
 	if (thread_pool) {
 		memdelete(thread_pool);
 	}
