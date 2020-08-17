@@ -41,13 +41,6 @@ void ThreadPoolJob::set_cancelled(const bool value) {
 	_cancelled = value;
 }
 
-bool ThreadPoolJob::get_limit_execution_time() const {
-	return _limit_execution_time;
-}
-void ThreadPoolJob::set_limit_execution_time(const bool value) {
-	_limit_execution_time = value;
-}
-
 float ThreadPoolJob::get_max_allocated_time() const {
 	return _max_allocated_time;
 }
@@ -74,6 +67,11 @@ int ThreadPoolJob::get_stage() const {
 }
 void ThreadPoolJob::set_stage(const int value) {
 	_stage = value;
+}
+
+void ThreadPoolJob::reset_stages() {
+	_current_run_stage = 0;
+	_stage = 0;
 }
 
 Variant ThreadPoolJob::get_object() const {
@@ -111,20 +109,28 @@ bool ThreadPoolJob::should_do(const bool just_check) {
 	++_current_run_stage;
 	++_stage;
 
-	return false;
+	return true;
 }
 bool ThreadPoolJob::should_return() {
 	if (_cancelled)
 		return true;
 
-	if (!_limit_execution_time)
+	if (_max_allocated_time < 0.00001)
 		return false;
 
-	return get_current_execution_time() >= _limit_execution_time;
+	return get_current_execution_time() >= _max_allocated_time;
 }
 
 void ThreadPoolJob::execute() {
 	ERR_FAIL_COND(!has_method("_execute"));
+
+	_current_run_stage = 0;
+
+#if VERSION_MAJOR < 4
+	_start_time = OS::get_singleton()->get_system_time_msecs();
+#else
+	_start_time = OS::get_singleton()->get_ticks_msec();
+#endif
 
 	call("_execute");
 }
@@ -133,7 +139,6 @@ ThreadPoolJob::ThreadPoolJob() {
 	_complete = true;
 	_cancelled = false;
 
-	_limit_execution_time = false;
 	_max_allocated_time = 0;
 	_start_time = 0;
 
@@ -155,10 +160,6 @@ void ThreadPoolJob::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_complete", "value"), &ThreadPoolJob::set_complete);
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "complete"), "set_complete", "get_complete");
 
-	ClassDB::bind_method(D_METHOD("get_limit_execution_time"), &ThreadPoolJob::get_limit_execution_time);
-	ClassDB::bind_method(D_METHOD("set_limit_execution_time", "value"), &ThreadPoolJob::set_limit_execution_time);
-	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "limit_execution_time"), "set_limit_execution_time", "get_limit_execution_time");
-
 	ClassDB::bind_method(D_METHOD("get_start_time"), &ThreadPoolJob::get_start_time);
 	ClassDB::bind_method(D_METHOD("set_start_time", "value"), &ThreadPoolJob::set_start_time);
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "start_time"), "set_start_time", "get_start_time");
@@ -170,6 +171,8 @@ void ThreadPoolJob::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_stage"), &ThreadPoolJob::get_stage);
 	ClassDB::bind_method(D_METHOD("set_stage", "value"), &ThreadPoolJob::set_stage);
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "stage"), "set_stage", "get_stage");
+
+	ClassDB::bind_method(D_METHOD("reset_stages"), &ThreadPoolJob::reset_stages);
 
 	ClassDB::bind_method(D_METHOD("get_current_execution_time"), &ThreadPoolJob::get_current_execution_time);
 
