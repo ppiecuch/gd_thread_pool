@@ -181,7 +181,7 @@ void ThreadPool::add_job(const Ref<ThreadPoolJob> &job) {
 
 			if (!context->job.is_valid()) {
 				context->job = job;
-				context->semaphore->post();
+				context->semaphore.post();
 				return;
 			}
 		}
@@ -288,7 +288,7 @@ void ThreadPool::_thread_finished(ThreadPoolContext *context) {
 
 	if (_current_queue_head != _current_queue_tail) {
 		context->job = _queue.get(_current_queue_head);
-		context->semaphore->post();
+		context->semaphore.post();
 		_queue.write[_current_queue_head].unref();
 
 		++_current_queue_head;
@@ -299,7 +299,7 @@ void ThreadPool::_worker_thread_func(void *user_data) {
 	ThreadPoolContext *context = reinterpret_cast<ThreadPoolContext *>(user_data);
 
 	while (context->running) {
-		context->semaphore->wait();
+		context->semaphore.wait();
 
 		if (!context->job.is_valid())
 			continue;
@@ -385,12 +385,7 @@ ThreadPool::ThreadPool() {
 			ThreadPoolContext *context = memnew(ThreadPoolContext);
 
 			context->running = true;
-#if VERSION_MAJOR < 4
-			context->semaphore = Semaphore::create();
-#else
-			context->semaphore = memnew(Semaphore);
-#endif
-			context->thread = Thread::create(ThreadPool::_worker_thread_func, context);
+			context->thread.start(ThreadPool::_worker_thread_func, context);
 
 			_threads.write[i] = context;
 		}
@@ -404,15 +399,13 @@ ThreadPool::~ThreadPool() {
 		ThreadPoolContext *context = _threads.get(i);
 
 		context->running = false;
-		context->semaphore->post();
+		context->semaphore.post();
 	}
 
 	for (int i = 0; i < _threads.size(); ++i) {
 		ThreadPoolContext *context = _threads.get(i);
-		Thread::wait_to_finish(context->thread);
+		context->thread.wait_to_finish();
 
-		memdelete(context->thread);
-		memdelete(context->semaphore);
 		context->job.unref();
 		memdelete(context);
 	}

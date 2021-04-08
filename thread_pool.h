@@ -42,14 +42,12 @@ class ThreadPool : public Object {
 
 protected:
 	struct ThreadPoolContext {
-		Thread *thread;
-		Semaphore *semaphore;
+		Thread thread;
+		Semaphore semaphore;
 		Ref<ThreadPoolJob> job;
 		bool running;
 
 		ThreadPoolContext() {
-			thread = NULL;
-			semaphore = NULL;
 			running = false;
 		}
 	};
